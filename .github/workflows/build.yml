@@ -1,27 +1,29 @@
-name: Build Docker Image
+name: Build and Push Docker Image
 
 on:
   push:
-    branches:
-      - main
     tags:
-      - v*
-
-env:
-  REGISTRY: ghcr.io
-  IMAGE: vfhky/cloudflare-bypass
+      - 'v*'
 
 jobs:
-  build-and-push:
+  build:
     runs-on: ubuntu-latest
 
-    permissions:
-      packages: write
-      contents: read
-
     steps:
-      - name: Checkout
+      - name: Check out the code
         uses: actions/checkout@v2
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v2
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+        with:
+          version: latest
 
       - name: Cache Docker layers
         uses: actions/cache@v2
@@ -31,49 +33,15 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-buildx-
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v1
+      - name: Extract tag name
+        id: get_tag
+        run: echo "TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-      - name: Set up Docker Buildx
-        id: buildx
-        uses: docker/setup-buildx-action@v1
-
-      - name: Inspect builder
-        run: |
-          echo "Name:      ${{ steps.buildx.outputs.name }}"
-          echo "Endpoint:  ${{ steps.buildx.outputs.endpoint }}"
-          echo "Status:    ${{ steps.buildx.outputs.status }}"
-          echo "Flags:     ${{ steps.buildx.outputs.flags }}"
-          echo "Platforms: ${{ steps.buildx.outputs.platforms }}"
-
-      - name: Log in to the Container registry
-        uses: docker/login-action@v1
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Extract metadata for Docker
-        id: meta
-        uses: docker/metadata-action@v3
-        with:
-          images: ${{ env.REGISTRY }}/${{ env.IMAGE }}
-
-      - name: Build and push
-        uses: docker/build-push-action@v2
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v3
         with:
           context: .
           file: ./Dockerfile
-          target: production
-          builder: ${{ steps.buildx.outputs.name }}
-          platforms: linux/amd64,linux/arm64
           push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache
-
-      - name: Inspect image
-        run: |
-          docker buildx imagetools inspect \
-          ${{ env.REGISTRY }}/${{ env.IMAGE }}:${{ steps.meta.outputs.version }}
+          tags: ghcr.io/${{ github.repository_owner }}/cloudflare-bypass:${{ steps.get_tag.outputs.TAG }}
+          
