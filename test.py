@@ -23,6 +23,8 @@ def get_chromium_options(browser_path: str, arguments: list) -> ChromiumOptions:
     :return: Configured ChromiumOptions instance.
     """
     options = ChromiumOptions()
+    EXTENSION_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "turnstilePatch"))
+    options.add_extension(EXTENSION_PATH)
     options.set_argument('--auto-open-devtools-for-tabs', 'true') # we don't need this anymore
     options.set_paths(browser_path=browser_path)
     for argument in arguments:
