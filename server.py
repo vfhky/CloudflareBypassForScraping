@@ -64,6 +64,8 @@ def bypass_cloudflare(url: str, retries: int, log: bool) -> ChromiumPage:
         display.start()
 
         options = ChromiumOptions()
+        EXTENSION_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "turnstilePatch"))
+        options.add_extension(EXTENSION_PATH)
         options.set_argument("--auto-open-devtools-for-tabs", "true")
         options.set_argument("--remote-debugging-port=9222")
         options.set_argument("--no-sandbox")  # Necessary for Docker
@@ -71,6 +73,8 @@ def bypass_cloudflare(url: str, retries: int, log: bool) -> ChromiumPage:
         options.set_paths(browser_path=browser_path).headless(False)
     else:
         options = ChromiumOptions()
+        EXTENSION_PATH = os.path.abspath(os.path.join(os.path.dirname(__file__), "turnstilePatch"))
+        options.add_extension(EXTENSION_PATH)
         options.set_argument("--auto-open-devtools-for-tabs", "true")
         options.set_paths(browser_path=browser_path).headless(False)
 
